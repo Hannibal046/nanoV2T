@@ -1,0 +1,33 @@
+## data
+dataset_name_or_path: jxm/nq_corpus_dpr
+max_seq_length: 32
+embedding_construction: offline
+max_eval_samples: 1000
+draft_dir: checkpoints/gtr_t5_nq_32_stage1/wandb/run-20240624_054421-6a5dq0pj/files/hyps
+
+## model
+generator_name_or_path: google-t5/t5-base
+embedder_name_or_path: sentence-transformers/gtr-t5-base
+expanding_factor: 16 
+torch_compile: True
+project_draft_embedding: True
+layer_norm_after_projection: True
+
+## train
+task_type: stage2
+workdir: .
+learning_rate: 0.001
+lr_scheduler_type: constant_with_warmup
+warmup_ratio: 0.0053
+weight_decay: 0.0
+num_train_epochs: 100
+clip_grad_norm: 1.0
+seed: 42
+per_device_train_batch_size: 512
+gradient_accumulation_steps: 1   ## assume there are 8 GPUs
+
+## logging
+logging_steps: 100
+project_name: nanov2t
+exp_name: gtr_t5_nq_32_stage2
+checkpointing_steps: epoch ## string number or epoch
