@@ -32,21 +32,12 @@ import torch.distributed as dist
 from tqdm.auto import tqdm
 
 ## own
-from v2t.utils import write_jsonl
+from v2t.utils import write_jsonl,save_with_accelerate,get_yaml_file
 from v2t.model import (
     load_generator,
     load_embedder,
 )
 from v2t.data import load_data,collator
-
-from v2t.language_modeling.utils import (
-    save_with_accelerate,
-)
-
-from v2t.utils import (
-    get_yaml_file,
-)
-
 from v2t.overwatch import initialize_overwatch
 overwatch = initialize_overwatch(__name__)
 

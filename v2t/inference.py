@@ -21,14 +21,14 @@ def move_to_device(batch,device):
             batch[k] = batch[k].to(device)
     return batch
 
-def single_step_generation(dataset,generator,tokenizer,generation_kwargs,embedder,enable_progress_bar=False):
-    eval_batch_size = 32
+def single_step_generation(dataset,generator,tokenizer,generation_kwargs,embedder,batch_size,enable_progress_bar=False):
+
     device = generator.device
     collate_fn = partial(collator,tokenizer=tokenizer)
     dataloader = torch.utils.data.DataLoader(
         dataset,
         shuffle=False,
-        batch_size = eval_batch_size,
+        batch_size = batch_size,
         collate_fn = collate_fn,
     ) 
     progress_bar = tqdm(range(len(dataloader)), disable=not enable_progress_bar, ncols=100)
@@ -61,11 +61,12 @@ def single_step_generation(dataset,generator,tokenizer,generation_kwargs,embedde
 
         ids = [x for x in batch['ids'] for _ in range(generation_kwargs["num_return_sequences"])]
         
-        for id,gen_score,cos_sim_score,generated_hyp in zip(ids,gen_scores,cos_sim_scores,generated_hyps,strict=True):
+        for id,gen_score,cos_sim_score,generated_hyp,hyp_embedding in zip(ids,gen_scores,cos_sim_scores,generated_hyps,hyps_embeddings,strict=True):
             id2hyps[int(id)].append({
                 "gen_score":gen_score,
                 "cos_score":cos_sim_score,
                 "hyp":generated_hyp,
+                "hyp_embedding":hyp_embedding,
             })
     
     return id2hyps
@@ -73,8 +74,13 @@ def single_step_generation(dataset,generator,tokenizer,generation_kwargs,embedde
 def maybe_gather_from_ddp(list_of_text,distributed_state):
     if distributed_state.num_processes > 1:
         all_ranks_objects = [None for _ in range(distributed_state.num_processes)]
-        dist.all_gather_object(all_ranks_objects,list_of_text)
-        list_of_text = [x for y in all_ranks_objects for x in y]
+        dist.gather_object(
+            list_of_text,
+            all_ranks_objects if distributed_state.is_local_main_process else None,
+            dst=0
+        )
+        if distributed_state.is_local_main_process:
+            list_of_text = [x for y in all_ranks_objects for x in y]
     return list_of_text
 
 def parse_args():
@@ -87,7 +93,9 @@ def parse_args():
     parser.add_argument("--max_seq_length",type=int,default=32)
     parser.add_argument("--num_beams",type=int,default=4)
     parser.add_argument("--num_iters",type=int,default=50)
-    parser.add_argument("--guiding_criteria",default="cos_score",choices=['gen_socre','cos_score'])
+    parser.add_argument("--enable_progress_bar",type=eval,default=False)
+    parser.add_argument("--eval_batch_size",type=int,default=64)
+    parser.add_argument("--guiding_criteria",default="gen_score",choices=['gen_score','cos_score'])
     parser.add_argument("--output_dir")
     args = parser.parse_args()
     return args
@@ -95,6 +103,7 @@ def parse_args():
 
 if __name__ == "__main__":
     args = parse_args()
+    overwatch.info(args)
     distributed_state = PartialState()
     device = distributed_state.device
     num_return_sequences = args.num_beams
@@ -130,6 +139,7 @@ if __name__ == "__main__":
         dataset_dict = {}
         for sample in sharded_dataset:
             dataset_dict[int(sample['idx'].item())] = [sample]
+
         eval_results = []
         all_hyps_over_iter = []
         
@@ -138,14 +148,18 @@ if __name__ == "__main__":
             for sample in dataset_dict.values():
                 dataset.extend(sample[:args.num_beams])
 
-            id2hyps = single_step_generation(dataset,generator,tokenizer,generation_kwargs,embedder,enable_progress_bar=distributed_state.is_local_main_process)
+            id2hyps = single_step_generation(
+                dataset,generator,tokenizer,generation_kwargs,embedder,
+                enable_progress_bar=distributed_state.is_local_main_process and args.enable_progress_bar,
+                batch_size = args.eval_batch_size,
+                )
             
             ## sort hyps
             for id in id2hyps:
                 sorted_hyps = sorted(id2hyps[id],key=lambda x:x[args.guiding_criteria],reverse=True)
                 ## select top unique
                 unique_list,unique_set = [],set()
-                for hyp_dict in id2hyps[id]:
+                for hyp_dict in sorted_hyps:
                     if hyp_dict['hyp'] not in unique_set:
                         unique_set.add(hyp_dict['hyp'])
                         unique_list.append(hyp_dict)
@@ -155,30 +169,20 @@ if __name__ == "__main__":
 
             hyps_for_eval = [id2hyps[id][0]['hyp'] for id in id2hyps]
             hyps_for_eval = maybe_gather_from_ddp(hyps_for_eval,distributed_state)
-            eval_result = eval_v2t(hyps_for_eval,refs,embedder)
-            eval_results.append(eval_result)
-            all_hyps_over_iter.append(hyps_for_eval)
-            overwatch.info(f"{iter_idx+1},{eval_result}")
+            if distributed_state.is_local_main_process:
+                eval_result = eval_v2t(hyps_for_eval,refs,embedder)
+                eval_results.append(eval_result)
+                all_hyps_over_iter.append(hyps_for_eval)
+                overwatch.info(f"Iteration: {iter_idx+1}, {eval_result}")
 
-            ## get new draft_embeddings
-            all_drafts = []
-            for id in id2hyps:
-                all_drafts.extend([hyp_dict['hyp'] for hyp_dict in id2hyps[id]])
-            all_draft_embeddings = embedder.encode(all_drafts,batch_size=128,show_progress_bar=False,convert_to_tensor=True)
-            all_draft_input_ids = tokenizer(all_drafts,max_length=args.max_seq_length+1,truncation=True,padding=True,return_tensors='pt').input_ids
-
-            ## update dataset_dict
-            cnt_idx= 0
             for id in dataset_dict:
                 if len(dataset_dict[id]) != len(id2hyps[id]):
                     dataset_dict[id] = [dataset_dict[id][0] for _ in range(len(id2hyps[id]))]
                 assert len(dataset_dict[id]) == len(id2hyps[id])
                 
-                for beam_idx in range(len(id2hyps[id])):
-                    dataset_dict[id][beam_idx]['draft_input_ids'] = all_draft_input_ids[cnt_idx]
-                    dataset_dict[id][beam_idx]['draft_embedding'] = all_draft_embeddings[cnt_idx]
-                    cnt_idx += 1
-            assert cnt_idx == all_draft_input_ids.shape[0] + 1
+                for rank in range(len(id2hyps[id])):
+                    dataset_dict[id][rank]['draft_input_ids'] = tokenizer(id2hyps[id][rank]['hyp'],max_length=args.max_seq_length+1,truncation=True,padding=True,return_tensors='pt').input_ids[0]
+                    dataset_dict[id][rank]['draft_embedding'] = id2hyps[id][rank]['hyp_embedding']
 
     if args.output_dir is not None:
         if distributed_state.is_local_main_process:

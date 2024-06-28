@@ -141,3 +141,25 @@ def get_recall(qid2ranking,qid2positives,cutoff_ranks=[50,200,1000,5000,10000]):
         f"recall@{cutoff_rank}":sum(qid2recall[cutoff_rank].values()) / num_samples
         for cutoff_rank in cutoff_ranks
     }
+
+
+def save_with_accelerate(accelerator, model, tokenizer, output_dir,only_state_dict=True):
+    import torch
+    unwrapped_model = accelerator.unwrap_model(model)
+
+    # When doing multi-gpu training, we need to use accelerator.get_state_dict(model) to get the state_dict.
+    # Otherwise, sometimes the model will be saved with only part of the parameters.
+    # Also, accelerator needs to use the wrapped model to get the state_dict.
+    state_dict = accelerator.get_state_dict(model)
+    if only_state_dict:
+        if accelerator.is_local_main_process:
+            torch.save(state_dict, os.path.join(output_dir,'ckpt.pt'))
+    else:
+        if accelerator.is_local_main_process:
+            unwrapped_model.save_pretrained(output_dir)
+            tokenizer.save_pretrained(output_dir)
+            # unwrapped_model.save_pretrained(
+            #     output_dir, is_main_process=accelerator.is_main_process, save_function=accelerator.save, state_dict=state_dict,
+            #     safe_serialization=False, ## safetensors is buggy for now
+            # )
+            
