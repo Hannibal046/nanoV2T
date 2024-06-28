@@ -37,3 +37,7 @@ accelerate launch --num_processes 8 \
         --max_seq_length 32 \
         --num_beams 5 --num_iters 50
 ```
+
+
+## LOG
+- [2024/6/28] Support two stage training and inference, however, the eval number is lower than reported and using gen_socre to guide sbeam is significantly better than cos_score (looking into it)

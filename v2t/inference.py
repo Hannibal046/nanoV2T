@@ -130,7 +130,6 @@ if __name__ == "__main__":
         dataset_dict = {}
         for sample in sharded_dataset:
             dataset_dict[int(sample['idx'].item())] = [sample]
-
         eval_results = []
         all_hyps_over_iter = []
         
@@ -138,6 +137,7 @@ if __name__ == "__main__":
             dataset = []
             for sample in dataset_dict.values():
                 dataset.extend(sample[:args.num_beams])
+
             id2hyps = single_step_generation(dataset,generator,tokenizer,generation_kwargs,embedder,enable_progress_bar=distributed_state.is_local_main_process)
             
             ## sort hyps

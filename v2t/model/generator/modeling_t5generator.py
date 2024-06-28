@@ -67,7 +67,7 @@ class T5Generator(T5ForConditionalGeneration):
             self.diff_projector = Projector(config)
         
         if config.layer_norm_after_projection:
-            self.ln_proj = nn.LayerNorm(self.config.hidden_size)
+            self.proj_ln = nn.LayerNorm(self.config.hidden_size)
         
         self.post_init()
 
@@ -78,7 +78,7 @@ class T5Generator(T5ForConditionalGeneration):
         embeddings:   [batch_size,num_embeds,embedder_hidden_size]
         """        
         ## project target_embeddings
-        num_sep_tokens = 4
+        num_sep_tokens = 0
         batch_size,_ = target_embeddings.shape
         device = target_embeddings.device
         input_embeds = self.target_projector(target_embeddings)
@@ -94,6 +94,7 @@ class T5Generator(T5ForConditionalGeneration):
                     self.draft_projector(draft_embeddings),
                 ),dim=1
             )
+            num_sep_tokens += 2
 
             input_embeds = torch.concat(
                 (
@@ -102,11 +103,13 @@ class T5Generator(T5ForConditionalGeneration):
                     self.diff_projector(target_embeddings-draft_embeddings),
                 ),dim=1
             )
+            num_sep_tokens += 1
 
         ## input_ids --> embeddings
         if input_ids is not None:
             token_embeds = self.shared(input_ids) # [batch_size,seq_length, d_model]
             input_embeds = torch.concat((input_embeds,sep_token,token_embeds),dim=1)
+            num_sep_tokens += 1
 
         ## prepare attention_mask
         multiplier = 3 if draft_embeddings is not None else 1
@@ -115,8 +118,8 @@ class T5Generator(T5ForConditionalGeneration):
         if attention_mask is not None:
             extended_attention_mask = torch.concat((extended_attention_mask,attention_mask),dim=1)
 
-        if hasattr(self,"ln_proj"):
-            input_embeds = self.ln_proj(input_embeds)
+        if hasattr(self,"proj_ln"):
+            input_embeds = self.proj_ln(input_embeds)
 
         return input_embeds,extended_attention_mask
 

@@ -1,7 +1,7 @@
 import torch
 import os
 from transformers import AutoTokenizer,AutoConfig
-from ..generator.modeling_t5generator import T5Generator,T5GeneratorConfig
+from .modeling_t5generator import T5Generator,T5GeneratorConfig
 
 from v2t.overwatch import initialize_overwatch
 overwatch = initialize_overwatch(__name__)
