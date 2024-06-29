@@ -162,4 +162,8 @@ def save_with_accelerate(accelerator, model, tokenizer, output_dir,only_state_di
             #     output_dir, is_main_process=accelerator.is_main_process, save_function=accelerator.save, state_dict=state_dict,
             #     safe_serialization=False, ## safetensors is buggy for now
             # )
-            
+
+def is_equal(x,y):
+    import torch
+    tolerance = 1e-5
+    return bool(torch.all(torch.abs(torch.tensor(x) - torch.tensor(y)) < tolerance))

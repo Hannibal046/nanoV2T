@@ -117,6 +117,7 @@ class T5Generator(T5ForConditionalGeneration):
 
         if attention_mask is not None:
             extended_attention_mask = torch.concat((extended_attention_mask,attention_mask),dim=1)
+            assert extended_attention_mask.shape[:2] == input_embeds.shape[:2], (extended_attention_mask.shape,input_embeds.shape)
 
         if hasattr(self,"proj_ln"):
             input_embeds = self.proj_ln(input_embeds)

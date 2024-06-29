@@ -13,7 +13,7 @@ def get_bleu_score(hyps,refs):
     bleu = evaluate.load("sacrebleu")
     bleu_score = [
         bleu.compute(predictions=[p], references=[r])["score"]
-        for p, r in zip(hyps, refs)
+        for p, r in zip(hyps, refs, strict=True)
     ]
     return sum(bleu_score)/len(bleu_score)
 
@@ -22,7 +22,7 @@ def get_token_f1(hyps,refs):
     # from: https://github.com/jxmorris12/vec2text/blob/f1369cbfe6bf9e216ac2a3758369c165278c9046/vec2text/trainers/base.py#L288
     import nltk
     f1s = []
-    for hyp,ref in zip(hyps,refs):
+    for hyp,ref in zip(hyps,refs,strict=True):
         hyp = set(nltk.tokenize.word_tokenize(hyp))
         ref = set(nltk.tokenize.word_tokenize(ref))
 
@@ -42,12 +42,14 @@ def get_token_f1(hyps,refs):
 def get_exact_match(hyps,refs):
     # from: https://github.com/jxmorris12/vec2text/blob/f1369cbfe6bf9e216ac2a3758369c165278c9046/vec2text/trainers/base.py#L350C9-L350C78
     import numpy as np
+    assert len(hyps) == len(refs)
     exact_match_score =  (np.array(hyps) == np.array(refs))
     return sum(exact_match_score)/len(exact_match_score)
 
 def get_cos_sim(hyps,refs,embedder):
     # from: https://github.com/jxmorris12/vec2text/blob/f1369cbfe6bf9e216ac2a3758369c165278c9046/vec2text/trainers/base.py#L480
     import torch
+    assert len(hyps) == len(refs)
     hyp_embeds = embedder.encode(hyps,convert_to_tensor=True,show_progress_bar=False)
     ref_embeds = embedder.encode(refs,convert_to_tensor=True,show_progress_bar=False)
     scores = torch.nn.CosineSimilarity(dim=1)(hyp_embeds, ref_embeds)

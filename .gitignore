@@ -35,3 +35,6 @@ open-instruct
 checkpoints
 hyps
 .vscode
+new_draft.ipynb
+vec2text
+inference_jx.py
