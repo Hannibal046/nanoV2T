@@ -352,13 +352,14 @@ def main():
         torch_compile=args.torch_compile,
         project_draft_embedding=args.project_draft_embedding,
         layer_norm_after_projection=args.layer_norm_after_projection,
+        init_new_module=True,
     )
 
     ## == Build Dataset == ##
     train_dataset,dev_dataset,test_dataset = load_data(
         args.dataset_name_or_path,
         tokenizer,
-        accelerator=accelerator,
+        partial_state=accelerator.state,
         max_train_samples=args.max_train_samples,
         max_seq_length=args.max_seq_length,
         embedding_construction=args.embedding_construction,

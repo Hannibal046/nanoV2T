@@ -157,7 +157,7 @@ def build_embeddings(text,accelerator,embedder):
 def load_data(
         dataset_name_or_path,
         tokenizer,
-        accelerator=None,
+        partial_state=None,
         max_train_samples = None,
         max_seq_length = 32,
         embedding_construction = 'offline',
@@ -212,26 +212,26 @@ def load_data(
             tokenizer=tokenizer,
             max_seq_length=max_seq_length,
         )
-        with accelerator.main_process_first():
+        with partial_state.main_process_first():
             for _split in load_split:
                 v2t_datasets[_split] = v2t_datasets[_split].map(
                     encode_function,
                     batched=True,
                     num_proc=16,
-                    desc=f"Tokenizing and reformatting data on rank: {accelerator.local_process_index}",
+                    desc=f"Tokenizing and reformatting data on rank: {partial_state.local_process_index}",
                 )
                 v2t_datasets.set_format(type="pt")
                 if _split == 'train':
                     v2t_datasets['train'] = v2t_datasets['train'].filter(lambda example: (example['labels'] != -100).any())
 
-        accelerator.wait_for_everyone()
+        partial_state.wait_for_everyone()
 
         ## Construct Embeddings
         if embedding_construction == 'offline':
             ## Construct Embeddings for Target Text
             for _split in load_split:
                 overwatch.info(f"Pre-Build [bold]{_split}[/bold] Target Embeddings...")
-                embeddings = build_embeddings(v2t_datasets[_split]['text'],accelerator,embedder)
+                embeddings = build_embeddings(v2t_datasets[_split]['text'],partial_state,embedder)
                 v2t_datasets[_split] = v2t_datasets[_split].add_column(name="target_embedding", column=embeddings)
                 v2t_datasets[_split].set_format(type="pt")
 
@@ -239,7 +239,7 @@ def load_data(
             if draft_dir is not None:
                 for _split in load_split:
                     overwatch.info(f"Pre-Build [bold]{_split}[/bold] Darft Embeddings...")
-                    embeddings = build_embeddings(v2t_datasets[_split]['draft'],accelerator,embedder)
+                    embeddings = build_embeddings(v2t_datasets[_split]['draft'],partial_state,embedder)
                     v2t_datasets[_split] = v2t_datasets[_split].add_column(name="draft_embedding", column=embeddings)
                     v2t_datasets[_split].set_format(type="pt")
         
@@ -247,10 +247,10 @@ def load_data(
         for _split in load_split:
             v2t_datasets[_split] = v2t_datasets[_split].add_column("idx", range(len(v2t_datasets[_split])))
 
-        if accelerator.is_local_main_process and len(load_split)==3:
+        if partial_state.is_local_main_process and len(load_split)==3:
             overwatch.info(f"Saving data to cache path: {cache_path}")
             v2t_datasets.save_to_disk(cache_path)
-        accelerator.wait_for_everyone()
+        partial_state.wait_for_everyone()
     
     rets = [v2t_datasets[_split] for _split in load_split]
     return rets[0] if len(rets)==1 else rets

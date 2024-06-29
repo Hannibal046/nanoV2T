@@ -117,7 +117,7 @@ if __name__ == "__main__":
     test_dataset = load_data(
         dataset_name_or_path=args.dataset_name_or_path,
         tokenizer=tokenizer,
-        accelerator = None,
+        partial_state = distributed_state,
         max_seq_length=args.max_seq_length,
         embedder=embedder,
         load_split=['test'],

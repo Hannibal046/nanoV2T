@@ -19,7 +19,6 @@ embeddings
 RAG-Gist
 tmp
 results
-output
 wandb
 open-instruct
 flash-attention

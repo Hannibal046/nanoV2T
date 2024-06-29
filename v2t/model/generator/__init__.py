@@ -21,19 +21,15 @@ retriever2dim = {
 def load_generator(
     model_name_or_path: str,
     embedder_name_or_path: float = None,
-    expanding_factor=1,
+    expanding_factor=None,
     torch_compile=True,
     project_draft_embedding=None,
-    layer_norm_after_projection=False,
+    layer_norm_after_projection=None,
+    init_new_module=False,
 ):
     overwatch.info(f"Loading Generator: {model_name_or_path}")
     ## == Define Model and Config Class == ##
-    if os.path.exists(model_name_or_path):
-        config = AutoConfig.from_pretrained(model_name_or_path)
-        model_family = config.architectures[0]
-        CONFIG_CLASS,MODEL_CLASS = v2t_id2class[model_family]
-        config = CONFIG_CLASS.from_pretrained(model_name_or_path)
-    else:
+    if init_new_module: 
         CONFIG_CLASS,MODEL_CLASS = hf_id2class[model_name_or_path]
         config = CONFIG_CLASS.from_pretrained(
             model_name_or_path,
@@ -43,6 +39,12 @@ def load_generator(
             project_draft_embedding=project_draft_embedding,
             layer_norm_after_projection=layer_norm_after_projection,
         )
+    else:
+        config = AutoConfig.from_pretrained(model_name_or_path)
+        model_family = config.architectures[0]
+        CONFIG_CLASS,MODEL_CLASS = v2t_id2class[model_family]
+        config = CONFIG_CLASS.from_pretrained(model_name_or_path)
+
     ## == Load == ##
     model = MODEL_CLASS.from_pretrained(
         model_name_or_path,
