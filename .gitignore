@@ -32,7 +32,6 @@ vlm-evaluation
 vlm-eval
 open-instruct
 checkpoints
-hyps
 .vscode
 new_draft.ipynb
 vec2text
