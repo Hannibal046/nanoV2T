@@ -10,8 +10,6 @@ import torch.nn.functional as F
 from tqdm import tqdm
 from accelerate import PartialState
 import torch.distributed as dist
-import nltk
-nltk.download('punkt')
 
 from v2t.utils import eval_v2t,write_jsonl,is_equal
 from v2t.data import collator,load_data
@@ -89,6 +87,8 @@ def parse_args():
     parser.add_argument("--embedder_name_or_path")
     parser.add_argument("--max_seq_length",type=int,default=32)
     parser.add_argument("--num_beams",type=int,default=8)
+    parser.add_argument("--num_beam_groups",type=int,default=2)
+    parser.add_argument("--diversity_penalty",type=float,default=1.0)   
     parser.add_argument("--num_iters",type=int,default=50)
     parser.add_argument("--enable_progress_bar",type=eval,default=False)
     parser.add_argument("--eval_batch_size",type=int,default=64)
@@ -108,7 +108,9 @@ if __name__ == "__main__":
         "do_sample": False,
         "no_repeat_ngram_size": 0,
         "max_length": args.max_seq_length + 2, ## T5 would add <bos> and <eos>
-        "num_return_sequences":args.num_beams,
+        "num_return_sequences":num_return_sequences,
+        "diversity_penalty":args.diversity_penalty,
+        "num_beam_groups":args.num_beam_groups,
     }
     ## == load embedder and generator == ##
     embedder = load_embedder(args.embedder_name_or_path).to(device)

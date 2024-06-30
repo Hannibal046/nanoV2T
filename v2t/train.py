@@ -11,9 +11,6 @@ os.environ["TOKENIZERS_PARALLELISM"] = "false"
 os.environ["WANDB_IGNORE_GLOBS"]='*.pt' ## not upload ckpt to wandb cloud
 
 ## third-party
-import nltk
-nltk.download('punkt')
-
 ### huggingface
 import datasets
 from accelerate import Accelerator
