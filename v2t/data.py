@@ -154,6 +154,8 @@ def build_embeddings(text,accelerator,embedder):
             embeddings_from_all_ranks = [None for _ in range(accelerator.num_processes)]
             dist.all_gather_object(embeddings_from_all_ranks,embeddings)
             embeddings = [x for y in embeddings_from_all_ranks for x in y]
+        else:
+            embeddings = [x for x in embeddings]
     return embeddings
 
 def load_data(
