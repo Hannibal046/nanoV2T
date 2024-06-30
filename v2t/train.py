@@ -158,10 +158,10 @@ def parse_args():
         type=float,
         help='Clip gradient norm. Not compatible with deepspeed (use deepspeed config instead).',
     )
-    parser.add_argument(
-        "--embedding_construction",
-        type=str,
-    )
+    # parser.add_argument(
+    #     "--embedding_construction",
+    #     type=str,
+    # )
     parser.add_argument(
         "--torch_compile",
         type=eval,
@@ -362,7 +362,7 @@ def main():
         partial_state=accelerator.state,
         max_train_samples=args.max_train_samples,
         max_seq_length=args.max_seq_length,
-        embedding_construction=args.embedding_construction,
+        # embedding_construction=args.embedding_construction,
         embedder=embedder,
         draft_dir=args.draft_dir,
     )
@@ -389,7 +389,8 @@ def main():
         batch_size=args.per_device_train_batch_size,
     )
 
-    if args.embedding_construction == 'offline':embedder = embedder.cpu()
+    # if args.embedding_construction == 'offline':
+    embedder = embedder.cpu()
     
     ## == Build Optimizer == ##
     no_decay = ["bias", "layer_norm.weight"]

@@ -160,7 +160,6 @@ def load_data(
         partial_state=None,
         max_train_samples = None,
         max_seq_length = 32,
-        embedding_construction = 'offline',
         embedder = None,
         max_eval_samples=1000,
         draft_dir = None,
@@ -171,7 +170,6 @@ def load_data(
         dataset_name_or_path=dataset_name_or_path,
         max_seq_length=max_seq_length,
         max_train_samples=max_train_samples,
-        embedding_construction=embedding_construction,
         max_eval_samples = max_eval_samples,
         draft_dir = draft_dir,
     )
@@ -226,22 +224,19 @@ def load_data(
 
         partial_state.wait_for_everyone()
 
-        ## Construct Embeddings
-        if embedding_construction == 'offline':
-            ## Construct Embeddings for Target Text
-            for _split in load_split:
-                overwatch.info(f"Pre-Build [bold]{_split}[/bold] Target Embeddings...")
-                embeddings = build_embeddings(v2t_datasets[_split]['text'],partial_state,embedder)
-                v2t_datasets[_split] = v2t_datasets[_split].add_column(name="target_embedding", column=embeddings)
-                v2t_datasets[_split].set_format(type="pt")
+        for _split in load_split:
+            overwatch.info(f"Pre-Build [bold]{_split}[/bold] Target Embeddings on {partial_state.num_processes} GPUs with batch size 128")
+            embeddings = build_embeddings(v2t_datasets[_split]['text'],partial_state,embedder)
+            v2t_datasets[_split] = v2t_datasets[_split].add_column(name="target_embedding", column=embeddings)
+            v2t_datasets[_split].set_format(type="pt")
 
-            ## Construct Embeddings for Draft Text
-            if draft_dir is not None:
-                for _split in load_split:
-                    overwatch.info(f"Pre-Build [bold]{_split}[/bold] Darft Embeddings...")
-                    embeddings = build_embeddings(v2t_datasets[_split]['draft'],partial_state,embedder)
-                    v2t_datasets[_split] = v2t_datasets[_split].add_column(name="draft_embedding", column=embeddings)
-                    v2t_datasets[_split].set_format(type="pt")
+        ## Construct Embeddings for Draft Text
+        if draft_dir is not None:
+            for _split in load_split:
+                overwatch.info(f"Pre-Build [bold]{_split}[/bold] Darft Embeddings on {partial_state.num_processes} GPUs with batch size 128")
+                embeddings = build_embeddings(v2t_datasets[_split]['draft'],partial_state,embedder)
+                v2t_datasets[_split] = v2t_datasets[_split].add_column(name="draft_embedding", column=embeddings)
+                v2t_datasets[_split].set_format(type="pt")
         
         ## Add index
         for _split in load_split:

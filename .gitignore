@@ -36,3 +36,5 @@ checkpoints
 new_draft.ipynb
 vec2text
 inference_jx.py
+train.hyps.jsonl
+dev.hyps.jsonl

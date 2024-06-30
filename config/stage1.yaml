@@ -1,7 +1,6 @@
 ## data
 dataset_name_or_path: jxm/nq_corpus_dpr
 max_seq_length: 32
-embedding_construction: offline
 max_eval_samples: 1000
 
 ## model
