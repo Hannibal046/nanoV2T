@@ -114,10 +114,11 @@ def v2t_encode(
 
     return ret
 
-def load_data_from_hf(dataset_name_or_path,max_eval_samples,*args):
+def load_data_from_hf(dataset_name_or_path,max_eval_samples=None,*args):
     if dataset_name_or_path == 'jxm/nq_corpus_dpr':
         ## train/dev
         dataset = load_dataset(dataset_name_or_path)
+        max_eval_samples = 1000 if max_eval_samples is None else max_eval_samples
         max_eval_samples = min(len(dataset["dev"]), max_eval_samples)
         assert len(dataset['dev']) > 2 * max_eval_samples 
         dataset['test'] = dataset["dev"].select(range(max_eval_samples))
@@ -127,6 +128,7 @@ def load_data_from_hf(dataset_name_or_path,max_eval_samples,*args):
         ## only train split (#8841823)
         dataset = load_dataset(dataset_name_or_path)
         num_samples = len(dataset['train'])
+        max_eval_samples = min(len(dataset["dev"]), max_eval_samples) if max_eval_samples is not None else len(dataset["dev"])
         dataset['dev']   = dataset['train'].select(range(num_samples - 2*max_eval_samples,num_samples - max_eval_samples))
         dataset['test']  = dataset['train'].select(range(num_samples - max_eval_samples,num_samples))
         dataset['train'] = dataset['train'].select(range(0,num_samples-2*max_eval_samples))
@@ -249,3 +251,5 @@ def load_data(
     
     rets = [v2t_datasets[_split] for _split in load_split]
     return rets[0] if len(rets)==1 else rets
+
+
