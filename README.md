@@ -7,7 +7,7 @@ Simple replication of (for pedagogy and fun):
 ```
 conda create -n v2t python=3.11 -y && conda activate v2t
 conda install pytorch==2.1.1 pytorch-cuda=12.1 -c pytorch -c nvidia -y
-pip install transformers==4.41.2 accelerate==0.31.0 datasets sentencepiece wandb rich ipywidgets gpustat wget tiktoken pytest evaluate sacrebleu nltk sentence_transformers
+pip install transformers==4.41.2 accelerate==0.31.0 datasets sentencepiece wandb rich ipywidgets gpustat wget tiktoken pytest evaluate sacrebleu nltk sentence_transformers numpy==1.26.4
 pip install -e .
 ```
 

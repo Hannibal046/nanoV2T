@@ -10,6 +10,8 @@ import torch.nn.functional as F
 from tqdm import tqdm
 from accelerate import PartialState
 import torch.distributed as dist
+import nltk
+nltk.download('punkt')
 
 from v2t.utils import eval_v2t,write_jsonl,is_equal
 from v2t.data import collator,load_data
