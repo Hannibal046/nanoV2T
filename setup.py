@@ -1,7 +1,7 @@
 from setuptools import setup
 setup(name='v2t',
       version='0.1',
-      description='xRAG',
+      description='vec2text',
     #   url='http://github.com/tongling/clinicaltrial',
       author='Hannibal046',
       author_email='chengxin1998@stu.pku.edu.cn',

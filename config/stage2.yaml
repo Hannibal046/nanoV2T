@@ -19,7 +19,7 @@ learning_rate: 0.0025
 lr_scheduler_type: constant_with_warmup
 warmup_ratio: 0.0053
 weight_decay: 0.0
-num_train_epochs: 100
+num_train_epochs: 150
 clip_grad_norm: 1.0
 seed: 42
 per_device_train_batch_size: 512

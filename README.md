@@ -1,7 +1,7 @@
 ## nanoV2T
-Simple replication of (for pedagogy and fun):
-- [Text Embeddings Reveal (Almost) As Much As Text](https://arxiv.org/abs/2310.06816)
-- [Language Model Inversion](https://arxiv.org/abs/2311.13647)
+Simple replication of [Text Embeddings Reveal (Almost) As Much As Text](https://arxiv.org/abs/2310.06816) (for pedagogy and fun). The original repo is [here](https://github.com/jxmorris12/vec2text). 
+
+If you want to know more analysis about vec2text, we also recommend this paper: [Understanding and Mitigating the Threat of Vec2Text to Dense Retrieval Systems](https://arxiv.org/abs/2402.12784v1).
 
 ## Get Started
 ```
@@ -42,3 +42,27 @@ This is the expected results:
 ```
 {"bleu": 97.8, "token_f1": 99.5, "em": 93.2, "cos_sim": 1.0}
 ```
+
+## Notes
+Difference from original implementation:
+- We do not count special tokens (bos,eos,pad) as tokens that need to be recovered.
+- We optimize the inference process with (1) early stop when `cos_sim==1` and (2) distributed inference across GPUs.
+- We use the first 1000 samples from `jxm/nq_corpus_dpr` as test set.
+- We use larger batch size and correspondingly larger learning rate in both training stages.
+
+
+## How to add new embedding models?
+We support all models following the API of `Sentence Transformers`. Across this project, the embedder loading logic is defined at `v2t/model/emebdder/__init__.py`
+```python
+def load_embedder(
+    model_name_or_path: str,
+):
+    overwatch.info(f"Loading Retriever from: {model_name_or_path}")
+    if model_name_or_path == "sentence-transformers/gtr-t5-base":
+        embedder = SentenceTransformer(model_name_or_path,device='cpu')
+        tokenizer = embedder.tokenizer
+    return embedder
+```
+
+## How to add new generation models?
+Currently, we only support T5 models (from `T5-base` to `T5-11B`) which is defined at `v2t/model/generator/modeling_t5generator.py`.

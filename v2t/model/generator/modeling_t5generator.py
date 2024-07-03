@@ -2,8 +2,6 @@ import torch
 import torch.nn as nn
 import re
 from transformers import T5ForConditionalGeneration,T5Config 
-from typing import Optional,Union
-
 
 class T5GeneratorConfig(T5Config):
     def __init__(
@@ -23,7 +21,6 @@ class T5GeneratorConfig(T5Config):
         self.expanding_factor = expanding_factor
         self.project_draft_embedding = project_draft_embedding
         self.layer_norm_after_projection = layer_norm_after_projection
-
 
 class Projector(nn.Module):
     def __init__(self,config):
